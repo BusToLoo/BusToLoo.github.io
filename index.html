@@ -9,7 +9,7 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
             margin: 0;
-            padding-top: 110px;
+            padding-top: 145px;
             background-color: #f8f8f8;
             color: #1c1c1c;
             min-height: 100vh;
@@ -116,25 +116,76 @@
 
         .transport-menu {
             display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 15px;
             border-top: 1px solid #e5e5ea;
+            flex-wrap: wrap; 
         }
         .menu-button {
-            flex: 1;
-            padding: 15px 0;
+            flex: 1 1 auto;
+            max-width: 300px; 
+            padding: 8px 10px;
             text-align: center;
-            color: #8e8e93;
-            font-weight: 500;
-            font-size: 1rem;
+            color: #007aff;
+            font-size: 0.9rem;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-            background: none;
+            transition: all 0.2s ease;
+            border: 2px solid #e5e5ea;
+            background: #f0f0f5;
             outline: none;
+            border-radius: 8px;
+            line-height: 1.2;
+        }
+        .menu-button:hover {
+            background-color: #e5e5ea;
         }
         .menu-button.active {
-            color: #007aff;
+            color: white;
+            background: #007aff;
+            border-color: #007aff;
+            box-shadow: 0 2px 6px rgba(0, 122, 255, 0.3);
+        }
+        .menu-button-line1 {
             font-weight: 700;
-            box-shadow: inset 0 -3px 0 0 #007aff;
+            display: block;
+            font-size: 1rem;
+            margin-bottom: 2px;
+        }
+        .menu-button-line2 {
+            font-weight: 500;
+            display: block;
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 600px) {
+            .transport-menu {
+                gap: 8px;
+                padding: 10px 8px;
+            }
+            .menu-button {
+                flex: 1 1 30%; 
+                min-width: 90px;
+                padding: 6px 4px; 
+            }
+            .menu-button-line1 {
+                font-size: 0.9rem;
+            }
+            .menu-button-line2 {
+                font-size: 0.7rem;
+            }
+        }
+        
+        @media (min-width: 601px) {
+            .transport-menu {
+                flex-wrap: nowrap;
+                max-width: 600px;
+                margin: 0 auto;
+            }
+            .menu-button {
+                flex: 1;
+            }
         }
 
         .schedule-card {
@@ -234,7 +285,6 @@
             font-weight: 700;
         }
         
-        /* 💥 СТИЛИ ДЛЯ ЕДИНОГО СПИСКА ВРЕМЕНИ 💥 */
         .all-times-list {
             display: flex;
             flex-wrap: wrap;
@@ -253,7 +303,7 @@
             background-color: #e5e5ea; 
             color: #495057; 
             font-weight: 700; 
-            padding: 8px 12px; /* Увеличенный паддинг для лучшего вида */
+            padding: 8px 12px; 
             line-height: 1; 
             text-align: center;
         }
@@ -272,7 +322,6 @@
         .schedule-content.hidden {
             display: none;
         }
-        /* -------------------------------------- */
 
         .footer {
             margin-top: 40px;
@@ -299,7 +348,7 @@
                 font-size: 1.8rem;
             }
             body {
-                padding-top: 100px;
+                padding-top: 135px;
             }
         }
     </style>
@@ -312,9 +361,18 @@
         <h1 class="project-title">BusToLoo</h1>
     </div>
     <div class="transport-menu" id="transport-menu">
-        <div class="menu-button active" data-transport="116p" onclick="switchTransport('116p')">🚌 АВТОБУС 116П</div>
-        <div class="menu-button" data-transport="426" onclick="switchTransport('426')">🚐 МАРШРУТКА 426</div>
-        <div class="menu-button" data-transport="118" onclick="switchTransport('118')">🚌 АВТОБУС 118</div>
+        <button class="menu-button active" data-transport="116p" onclick="switchTransport('116p')">
+            <span class="menu-button-line1">🚌 116П</span>
+            <span class="menu-button-line2">АВТОБУС</span>
+        </button>
+        <button class="menu-button" data-transport="426" onclick="switchTransport('426')">
+            <span class="menu-button-line1">🚐 426</span>
+            <span class="menu-button-line2">МАРШРУТКА</span>
+        </button>
+        <button class="menu-button" data-transport="118" onclick="switchTransport('118')">
+            <span class="menu-button-line1">🚌 118</span>
+            <span class="menu-button-line2">АВТОБУС</span>
+        </button>
     </div>
 </div>
 
@@ -460,7 +518,6 @@
     };
     const kharinoCodes426 = ['H'];
     
-    // 💥 ДАННЫЕ ДЛЯ 118: 08:00S, 12:00S (стандартные), 14:00J (Харино) 💥
     const rawData118 = {
         'A_weekdays': '08:00S12:00S14:00J',
         'B_weekdays': '06:40J15:00J',
@@ -468,7 +525,6 @@
         'B_weekend': ''
     };
     const kharinoCodes118 = ['J'];
-    // -------------------------
 
     let currentTransport = '116p';
     let state = {
@@ -500,13 +556,11 @@
             parsedTimes.push({ time, code });
         }
         
-        // Сортируем по времени (в виде строки 'HH:MM')
         parsedTimes.sort((a, b) => a.time.localeCompare(b.time));
         
         return parsedTimes;
     }
 
-    /* 💥 ОБНОВЛЕННАЯ ФУНКЦИЯ РЕНДЕРИНГА 💥 */
     function renderScheduleTable(transport, parsedData) {
         if (parsedData.length === 0) {
             return '<p style="text-align: center; color: #ff3b30; font-weight: 600; padding: 20px; background: #fff0f0; border-radius: 6px;">🚫 В этот день/по этому направлению рейсов нет.</p>';
@@ -534,7 +588,6 @@
             const timeClass = isKharino ? 'kharino' : '';
             const filterType = isKharino ? 'kharino' : 'standard';
 
-            // Форматируем время из 'HH:MM' в 'H:MM' (убираем ведущий ноль, если час < 10)
             const displayTime = item.time.startsWith('0') ? item.time.substring(1) : item.time;
 
             html += `<span class="time-entry ${timeClass}" title="${codeTitle}" data-filter-type="${filterType}">${displayTime}</span>`;
@@ -543,7 +596,6 @@
         html += '</div>';
         return html;
     }
-    /* -------------------------------------- */
 
     function updateScheduleDisplay() {
         const transport = currentTransport;
@@ -551,7 +603,6 @@
         const currentData = state[transport];
         const { direction, day, filter } = currentData;
 
-        // 1. Скрываем все контейнеры расписаний для текущего транспорта.
         document.querySelectorAll(`#schedule-${transport} .schedule-content`).forEach(content => content.classList.add('hidden'));
 
         const activeContentId = `content-${transport}-${direction}-${day}`;
@@ -559,10 +610,8 @@
 
         if (!activeContent) return;
 
-        // 2. Отображаем только активный контейнер.
         activeContent.classList.remove('hidden');
 
-        // 3. Применяем фильтр к элементам внутри активного контейнера.
         activeContent.querySelectorAll('.time-entry').forEach(entry => {
             const filterType = entry.getAttribute('data-filter-type');
             
@@ -589,7 +638,6 @@
         
         document.getElementById('schedule-116p').style.display = (type === '116p') ? 'block' : 'none';
         document.getElementById('schedule-426').style.display = (type === '426') ? 'block' : 'none';
-        // 💥 ВИДИМОСТЬ ДЛЯ 118 💥
         document.getElementById('schedule-118').style.display = (type === '118') ? 'block' : 'none';
         
         document.querySelectorAll('.menu-button').forEach(btn => {
@@ -670,7 +718,6 @@
         if (deferredPrompt) {
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User response to the install prompt: ${outcome}`);
             deferredPrompt = null;
             
             if (outcome === 'accepted') {
@@ -700,7 +747,6 @@
         document.getElementById('content-426-B-weekdays').innerHTML = renderScheduleTable('426', parseRawSchedule(rawData426.B_weekdays));
         document.getElementById('content-426-B-weekend').innerHTML = renderScheduleTable('426', parseRawSchedule(rawData426.B_weekend));
         
-        // 💥 РЕНДЕРИНГ 118 💥
         document.getElementById('content-118-A-weekdays').innerHTML = renderScheduleTable('118', parseRawSchedule(rawData118.A_weekdays));
         document.getElementById('content-118-A-weekend').innerHTML = renderScheduleTable('118', parseRawSchedule(rawData118.A_weekend));
         document.getElementById('content-118-B-weekdays').innerHTML = renderScheduleTable('118', parseRawSchedule(rawData118.B_weekdays));
@@ -714,7 +760,6 @@
         document.getElementById('tabs-426').addEventListener('click', handleDayTypeChange);
         document.getElementById('filter-buttons-426').addEventListener('click', handleFilterChange);
         
-        // 💥 ОБРАБОТЧИКИ 118 💥
         document.getElementById('direction-toggle-118').addEventListener('click', handleDirectionToggle);
         document.getElementById('tabs-118').addEventListener('click', handleDayTypeChange);
         document.getElementById('filter-buttons-118').addEventListener('click', handleFilterChange);
@@ -724,7 +769,6 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js')
                 .then(reg => {
-                    console.log('✅ Service Worker зарегистрирован');
                     if (reg.waiting) {
                         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
                     }
