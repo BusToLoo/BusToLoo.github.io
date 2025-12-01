@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BusToLoo: Расписание Транспорта</title>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+            margin: 0;
+            padding-top: 110px;
+            background-color: #f8f8f8;
+            color: #1c1c1c;
+            min-height: 100vh;
+        }
+        .schedule-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h2 {
+            color: #007aff;
+            margin-bottom: 5px;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .pwa-prompt-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: none;
+        }
+
+        .pwa-prompt-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #ff9500;
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+        }
+        
+        .pwa-prompt-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .pwa-toast {
+            position: absolute;
+            bottom: 65px; 
+            right: 0;
+            background-color: white;
+            color: #1c1c1c;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            font-size: 0.9rem;
+            font-weight: 600;
+            max-width: 280px; 
+            white-space: normal; 
+            word-break: normal;
+            text-align: center;
+            
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+        }
+
+        .pwa-toast.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+        }
+
+        .fixed-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+        }
+        .header-title-container {
+            padding: 15px 20px 10px;
+            text-align: center;
+        }
+        .author-top-small {
+            display: block;
+            font-size: 0.75rem;
+            color: #8e8e93;
+            font-weight: 500;
+            margin-bottom: -5px;
+        }
+        .project-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #007aff;
+            margin: 0;
+            letter-spacing: -1px;
+            text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+        }
+
+        .transport-menu {
+            display: flex;
+            border-top: 1px solid #e5e5ea;
+        }
+        .menu-button {
+            flex: 1;
+            padding: 15px 0;
+            text-align: center;
+            color: #8e8e93;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            background: none;
+            outline: none;
+        }
+        .menu-button.active {
+            color: #007aff;
+            font-weight: 700;
+            box-shadow: inset 0 -3px 0 0 #007aff;
+        }
+
+        .schedule-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e5e5ea;
+        }
+        
+        .legend-block {
+            padding: 10px 0 15px; 
+            border-bottom: 1px solid #e5e5ea; 
+            margin-bottom: 15px; 
+            font-size: 0.95rem;
+        }
+        .legend-block p {
+            margin: 0; 
+            margin-top: 5px; 
+        }
+
+        .direction-toggle {
+            display: flex;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #e5e5ea;
+        }
+        .direction-toggle button {
+            flex: 1;
+            padding: 14px 10px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: #555;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .direction-toggle button.active {
+            background: #007aff;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 0 5px rgba(0, 122, 255, 0.2);
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap; 
+        }
+        .schedule-tabs {
+            display: flex;
+            background-color: #e5e5ea;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .schedule-tabs button {
+            padding: 10px 15px;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            background: none;
+            color: #495057;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .schedule-tabs button.active {
+            background: #007aff;
+            color: white;
+            font-weight: 700;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-grow: 1;
+        }
+        .filter-buttons button {
+            padding: 10px 15px;
+            border: 1px solid #d1d1d6;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .filter-buttons button.active {
+            background-color: #ff9500;
+            color: white;
+            border-color: #ff9500;
+            font-weight: 700;
+        }
+        
+        /* 💥 СТИЛИ ДЛЯ ЕДИНОГО СПИСКА ВРЕМЕНИ 💥 */
+        .all-times-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px; 
+            padding: 10px 0;
+            margin: 0;
+        }
+        
+        .time-entry {
+            display: inline-block;
+            font-size: 1rem;
+            cursor: help;
+            border-radius: 8px; 
+            transition: all 0.2s ease;
+            
+            background-color: #e5e5ea; 
+            color: #495057; 
+            font-weight: 700; 
+            padding: 8px 12px; /* Увеличенный паддинг для лучшего вида */
+            line-height: 1; 
+            text-align: center;
+        }
+
+        .kharino {
+            color: #ff3b30;
+            font-weight: 700;
+            background-color: #ffe5e5; 
+            border: 1px solid #ff3b30; 
+        }
+        
+        .time-entry.hidden {
+            display: none !important;
+        }
+        
+        .schedule-content.hidden {
+            display: none;
+        }
+        /* -------------------------------------- */
+
+        .footer {
+            margin-top: 40px;
+            padding: 15px 20px;
+            text-align: center;
+            color: #8e8e93;
+            font-size: 0.85rem;
+            background-color: white;
+            border-top: 1px solid #e5e5ea;
+        }
+
+        @media (max-width: 600px) {
+            .controls-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .schedule-tabs, .filter-buttons {
+                width: 100%;
+            }
+            .filter-buttons button {
+                flex-grow: 1;
+            }
+            .project-title {
+                font-size: 1.8rem;
+            }
+            body {
+                padding-top: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="fixed-header">
+    <div class="header-title-container">
+        <span class="author-top-small">by Andrey Shmidt</span>
+        <h1 class="project-title">BusToLoo</h1>
+    </div>
+    <div class="transport-menu" id="transport-menu">
+        <div class="menu-button active" data-transport="116p" onclick="switchTransport('116p')">🚌 АВТОБУС 116П</div>
+        <div class="menu-button" data-transport="426" onclick="switchTransport('426')">🚐 МАРШРУТКА 426</div>
+        <div class="menu-button" data-transport="118" onclick="switchTransport('118')">🚌 АВТОБУС 118</div>
+    </div>
+</div>
+
+<div class="schedule-container">
+    
+    <div id="schedule-116p">
+        <h2>Маршрут №116П (Автобус)</h2>
+
+        <div class="direction-toggle" id="direction-toggle-116p">
+            <button class="active" data-direction="A">➡️ Ул. Малунцева → Береговой</button>
+            <button data-direction="B">⬅️ Береговой → Ул. Малунцева</button>
+        </div>
+
+        <div class="schedule-card">
+            <div class="legend-block">
+                <p style="color: #ff3b30;">• <span style="font-weight: 700;">Красным</span> — рейсы с заездом в Харино.</p>
+                <p style="color: #1c1c1c;">• Обычным — стандартные рейсы (без заезда в Харино).</p>
+            </div>
+            
+            <div class="controls-row">
+                <div class="schedule-tabs" id="tabs-116p">
+                    <button class="active" data-day="weekdays">Рабочие дни</button>
+                    <button data-day="weekend">Выходные</button>
+                </div>
+                <div class="filter-buttons" id="filter-buttons-116p">
+                    <button class="active" data-filter="all">Все рейсы</button>
+                    <button data-filter="kharino">Только Харино</button>
+                    <button data-filter="standard">Только Стандарт</button>
+                </div>
+            </div>
+
+            <div class="schedule-content" id="content-116p-A-weekdays"></div>
+            <div class="schedule-content" id="content-116p-A-weekend" class="hidden"></div>
+            <div class="schedule-content" id="content-116p-B-weekdays" class="hidden"></div>
+            <div class="schedule-content" id="content-116p-B-weekend" class="hidden"></div>
+        </div>
+    </div>
+    
+    <div id="schedule-426" style="display: none;">
+        <h2>Маршрут №426 (Маршрутка)</h2>
+
+        <div class="direction-toggle" id="direction-toggle-426">
+            <button class="active" data-direction="A">➡️ Ул. Малунцева → Харино</button>
+            <button data-direction="B">⬅️ Харино → Ул. Малунцева</button>
+        </div>
+
+        <div class="schedule-card">
+            <div class="legend-block">
+                <p style="color: #ff3b30;">• <span style="font-weight: 700;">Красным</span> — рейсы с заездом в Харино.</p>
+                <p style="color: #1c1c1c;">• Обычным — стандартные рейсы (без заезда в Харино, т.е. все рейсы 426).</p>
+            </div>
+
+            <div class="controls-row">
+                <div class="schedule-tabs" id="tabs-426">
+                    <button class="active" data-day="weekdays">Рабочие дни</button>
+                    <button data-day="weekend">Выходные</button>
+                </div>
+                <div class="filter-buttons" id="filter-buttons-426">
+                    <button class="active" data-filter="all">Все рейсы</button>
+                    <button data-filter="kharino">Только Харино</button>
+                    <button data-filter="standard">Только Стандарт</button>
+                </div>
+            </div>
+
+            <div class="schedule-content" id="content-426-A-weekdays"></div>
+            <div class="schedule-content" id="content-426-A-weekend" class="hidden"></div>
+            <div class="schedule-content" id="content-426-B-weekdays" class="hidden"></div>
+            <div class="schedule-content" id="content-426-B-weekend" class="hidden"></div>
+            
+            <p style="text-align: center; font-style: italic; color: #ff3b30; margin-top: 10px;">
+                *Маршрут 426 работает только в рабочие дни.*
+            </p>
+        </div>
+    </div>
+
+    <div id="schedule-118" style="display: none;">
+        <h2>Маршрут №118 (Автобус)</h2>
+
+        <div class="direction-toggle" id="direction-toggle-118">
+            <button class="active" data-direction="A">➡️ Ул. Малунцева → Береговой / Харино</button>
+            <button data-direction="B">⬅️ Харино / Береговой → Ул. Малунцева</button>
+        </div>
+
+        <div class="schedule-card">
+            <div class="legend-block">
+                <p style="color: #ff3b30;">• <span style="font-weight: 700;">Красным</span> — рейсы до/от Харино.</p>
+                <p style="color: #1c1c1c;">• Обычным — стандартные рейсы до/от Берегового.</p>
+                <p style="color: #1c1c1c;">• 06:40 (Харино → Малунцева) идет через Энтузиастов.</p>
+            </div>
+
+            <div class="controls-row">
+                <div class="schedule-tabs" id="tabs-118">
+                    <button class="active" data-day="weekdays">Рабочие дни</button>
+                    <button data-day="weekend">Выходные</button>
+                </div>
+                <div class="filter-buttons" id="filter-buttons-118">
+                    <button class="active" data-filter="all">Все рейсы</button>
+                    <button data-filter="kharino">Только Харино</button>
+                    <button data-filter="standard">Только Стандарт</button>
+                </div>
+            </div>
+
+            <div class="schedule-content" id="content-118-A-weekdays"></div>
+            <div class="schedule-content" id="content-118-A-weekend" class="hidden"></div>
+            <div class="schedule-content" id="content-118-B-weekdays" class="hidden"></div>
+            <div class="schedule-content" id="content-118-B-weekend" class="hidden"></div>
+            
+            <p style="text-align: center; font-style: italic; color: #ff3b30; margin-top: 10px;">
+                *Маршрут 118 работает только в рабочие дни.*
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    Проект BusToLoo: Удобство для местных
+</div>
+
+<div class="pwa-prompt-container" id="pwa-container">
+    <div class="pwa-toast" id="pwa-toast">
+        Установите на главный экран для быстрого доступа!
+    </div>
+    <button class="pwa-prompt-button" id="pwa-button" aria-label="Добавить на главный экран">
+        🏠
+    </button>
+</div>
+
+
+<script>
+    const rawData116p = {
+        'A_weekend': '05:44C06:09E06:38C07:19C07:53E08:31C09:13C09:52E10:32C11:55C13:30E13:51C15:30E15:47C16:32E17:56C18:39E20:20E21:59C',
+        'A_weekdays': '05:15C05:30E06:10E06:3006:51C07:13C07:49I08:1308:41C09:09C10:30E11:3012:30C13:00C14:30C15:00C15:2816:15E17:00C17:3018:00E18:30E19:25C19:5520:25E21:05C22:45C',
+        'B_weekdays': '06:00D06:10E06:30F06:40E07:2007:45D08:10D08:39I09:03F09:1509:40D10:06D11:12E11:40F12:3013:30D14:00D15:30D16:00D16:24N16:57E17:22F18:00D18:3018:45E19:10F19:10E19:35F20:15D20:4521:00E21:23F21:55D23:30D',
+        'B_weekend': '06:30D06:45E07:05F07:30D08:15D08:35E09:00F09:30D10:10D10:30E11:00F11:30D12:52D14:07E14:40F14:48D16:07E16:35F16:45D17:14E17:40F18:53D19:15E19:42F20:55E21:17F22:45D'
+    };
+    const kharinoCodes116p = ['E', 'F'];
+
+    const rawData426 = {
+        'A_weekdays': '06:50H09:00H12:00H14:30H17:00H19:20H',
+        'B_weekdays': '05:45H07:45H10:00H13:00H15:35H17:55H20:00H',
+        'A_weekend': '', 
+        'B_weekend': ''
+    };
+    const kharinoCodes426 = ['H'];
+    
+    // 💥 ДАННЫЕ ДЛЯ 118: 08:00S, 12:00S (стандартные), 14:00J (Харино) 💥
+    const rawData118 = {
+        'A_weekdays': '08:00S12:00S14:00J',
+        'B_weekdays': '06:40J15:00J',
+        'A_weekend': '', 
+        'B_weekend': ''
+    };
+    const kharinoCodes118 = ['J'];
+    // -------------------------
+
+    let currentTransport = '116p';
+    let state = {
+        '116p': { direction: 'A', day: 'weekdays', filter: 'all' },
+        '426': { direction: 'A', day: 'weekdays', filter: 'all' },
+        '118': { direction: 'A', day: 'weekdays', filter: 'all' }
+    };
+    
+    let deferredPrompt = null;
+    const pwaContainer = document.getElementById('pwa-container');
+    const pwaButton = document.getElementById('pwa-button');
+    const pwaToast = document.getElementById('pwa-toast');
+    let toastTimeout = null;
+
+
+    function parseRawSchedule(rawString) {
+        const parsedTimes = [];
+        const withCode = /(\d{2}:\d{2})([A-Z]+)/g;
+        const noCode = /(\d{2}:\d{2})(?![A-Z])/g;
+        
+        if (!rawString) return parsedTimes;
+        
+        let normalizedString = rawString.replace(noCode, (match) => `${match}S`);
+        
+        let match;
+        while ((match = withCode.exec(normalizedString)) !== null) {
+            const time = match[1];
+            const code = match[2];
+            parsedTimes.push({ time, code });
+        }
+        
+        // Сортируем по времени (в виде строки 'HH:MM')
+        parsedTimes.sort((a, b) => a.time.localeCompare(b.time));
+        
+        return parsedTimes;
+    }
+
+    /* 💥 ОБНОВЛЕННАЯ ФУНКЦИЯ РЕНДЕРИНГА 💥 */
+    function renderScheduleTable(transport, parsedData) {
+        if (parsedData.length === 0) {
+            return '<p style="text-align: center; color: #ff3b30; font-weight: 600; padding: 20px; background: #fff0f0; border-radius: 6px;">🚫 В этот день/по этому направлению рейсов нет.</p>';
+        }
+
+        let kharinoCodes;
+        if (transport === '116p') {
+            kharinoCodes = kharinoCodes116p;
+        } else if (transport === '426') {
+            kharinoCodes = kharinoCodes426;
+        } else if (transport === '118') {
+            kharinoCodes = kharinoCodes118;
+        } else {
+            kharinoCodes = [];
+        }
+
+        let html = '<div class="all-times-list">';
+
+        parsedData.forEach(item => {
+            const isKharino = kharinoCodes.includes(item.code);
+            const codeTitle = isKharino 
+                ? `Рейс до/от Харино (Красный, Код: ${item.code})` 
+                : `Стандартный рейс (Обычный, Код: ${item.code})`;
+            
+            const timeClass = isKharino ? 'kharino' : '';
+            const filterType = isKharino ? 'kharino' : 'standard';
+
+            // Форматируем время из 'HH:MM' в 'H:MM' (убираем ведущий ноль, если час < 10)
+            const displayTime = item.time.startsWith('0') ? item.time.substring(1) : item.time;
+
+            html += `<span class="time-entry ${timeClass}" title="${codeTitle}" data-filter-type="${filterType}">${displayTime}</span>`;
+        });
+
+        html += '</div>';
+        return html;
+    }
+    /* -------------------------------------- */
+
+    function updateScheduleDisplay() {
+        const transport = currentTransport;
+
+        const currentData = state[transport];
+        const { direction, day, filter } = currentData;
+
+        // 1. Скрываем все контейнеры расписаний для текущего транспорта.
+        document.querySelectorAll(`#schedule-${transport} .schedule-content`).forEach(content => content.classList.add('hidden'));
+
+        const activeContentId = `content-${transport}-${direction}-${day}`;
+        const activeContent = document.getElementById(activeContentId);
+
+        if (!activeContent) return;
+
+        // 2. Отображаем только активный контейнер.
+        activeContent.classList.remove('hidden');
+
+        // 3. Применяем фильтр к элементам внутри активного контейнера.
+        activeContent.querySelectorAll('.time-entry').forEach(entry => {
+            const filterType = entry.getAttribute('data-filter-type');
+            
+            if (filter === 'all') {
+                entry.classList.remove('hidden');
+            } else if (filter === 'kharino') {
+                entry.classList.toggle('hidden', filterType !== 'kharino');
+            } else if (filter === 'standard') {
+                entry.classList.toggle('hidden', filterType !== 'standard');
+            }
+        });
+    }
+
+    function switchTransport(type) {
+        
+        const prevType = currentTransport;
+        currentTransport = type;
+
+        if (type !== prevType) {
+            state[type].direction = 'A';
+            state[type].day = 'weekdays';
+            state[type].filter = 'all';
+        }
+        
+        document.getElementById('schedule-116p').style.display = (type === '116p') ? 'block' : 'none';
+        document.getElementById('schedule-426').style.display = (type === '426') ? 'block' : 'none';
+        // 💥 ВИДИМОСТЬ ДЛЯ 118 💥
+        document.getElementById('schedule-118').style.display = (type === '118') ? 'block' : 'none';
+        
+        document.querySelectorAll('.menu-button').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-transport') === type);
+        });
+        
+        const updateButtons = (type, stateKey, selector) => {
+            document.querySelectorAll(`#${selector}-${type} button`).forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.querySelector(`#${selector}-${type} button[data-${stateKey}="${state[type][stateKey]}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+        };
+
+        updateButtons(type, 'direction', 'direction-toggle');
+        updateButtons(type, 'day', 'tabs');
+        updateButtons(type, 'filter', 'filter-buttons');
+
+        updateScheduleDisplay();
+    }
+
+    function handleDirectionToggle(e) {
+        const transport = currentTransport;
+        if (e.target.tagName === 'BUTTON') {
+            state[transport].direction = e.target.getAttribute('data-direction');
+            
+            document.querySelectorAll(`#direction-toggle-${transport} button`).forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            updateScheduleDisplay();
+        }
+    }
+
+    function handleDayTypeChange(e) {
+        const transport = currentTransport;
+        if (e.target.tagName === 'BUTTON') {
+            state[transport].day = e.target.getAttribute('data-day');
+            
+            document.querySelectorAll(`#tabs-${transport} button`).forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            state[transport].filter = 'all';
+            document.querySelectorAll(`#filter-buttons-${transport} button`).forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`#filter-buttons-${transport} button[data-filter="all"]`).classList.add('active');
+            
+            updateScheduleDisplay();
+        }
+    }
+
+    function handleFilterChange(e) {
+        const transport = currentTransport;
+        if (e.target.tagName === 'BUTTON') {
+            state[transport].filter = e.target.getAttribute('data-filter');
+
+            document.querySelectorAll(`#filter-buttons-${transport} button`).forEach(btn => btn.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            updateScheduleDisplay();
+        }
+    }
+
+    function showPWAToast() {
+        if (!pwaToast.classList.contains('visible')) {
+            pwaToast.classList.add('visible');
+            clearTimeout(toastTimeout);
+            
+            toastTimeout = setTimeout(() => {
+                pwaToast.classList.remove('visible');
+                pwaToast.innerText = 'Установите на главный экран для быстрого доступа!';
+            }, 4000); 
+        }
+    }
+    
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); 
+        deferredPrompt = e;
+    });
+
+    pwaButton.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to the install prompt: ${outcome}`);
+            deferredPrompt = null;
+            
+            if (outcome === 'accepted') {
+                pwaToast.innerText = 'Приложение установлено! ✅';
+            } else {
+                pwaToast.innerText = 'Установка отменена.';
+            }
+
+            showPWAToast(); 
+            pwaContainer.style.display = 'none';
+
+        } else {
+            pwaToast.innerText = 'Для установки нажмите "Поделиться" (стрелка в квадрате) и выберите "На экран «Домой»"';
+            showPWAToast();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        document.getElementById('content-116p-A-weekdays').innerHTML = renderScheduleTable('116p', parseRawSchedule(rawData116p.A_weekdays));
+        document.getElementById('content-116p-A-weekend').innerHTML = renderScheduleTable('116p', parseRawSchedule(rawData116p.A_weekend));
+        document.getElementById('content-116p-B-weekdays').innerHTML = renderScheduleTable('116p', parseRawSchedule(rawData116p.B_weekdays));
+        document.getElementById('content-116p-B-weekend').innerHTML = renderScheduleTable('116p', parseRawSchedule(rawData116p.B_weekend));
+        
+        document.getElementById('content-426-A-weekdays').innerHTML = renderScheduleTable('426', parseRawSchedule(rawData426.A_weekdays));
+        document.getElementById('content-426-A-weekend').innerHTML = renderScheduleTable('426', parseRawSchedule(rawData426.A_weekend));
+        document.getElementById('content-426-B-weekdays').innerHTML = renderScheduleTable('426', parseRawSchedule(rawData426.B_weekdays));
+        document.getElementById('content-426-B-weekend').innerHTML = renderScheduleTable('426', parseRawSchedule(rawData426.B_weekend));
+        
+        // 💥 РЕНДЕРИНГ 118 💥
+        document.getElementById('content-118-A-weekdays').innerHTML = renderScheduleTable('118', parseRawSchedule(rawData118.A_weekdays));
+        document.getElementById('content-118-A-weekend').innerHTML = renderScheduleTable('118', parseRawSchedule(rawData118.A_weekend));
+        document.getElementById('content-118-B-weekdays').innerHTML = renderScheduleTable('118', parseRawSchedule(rawData118.B_weekdays));
+        document.getElementById('content-118-B-weekend').innerHTML = renderScheduleTable('118', parseRawSchedule(rawData118.B_weekend));
+
+        document.getElementById('direction-toggle-116p').addEventListener('click', handleDirectionToggle);
+        document.getElementById('tabs-116p').addEventListener('click', handleDayTypeChange);
+        document.getElementById('filter-buttons-116p').addEventListener('click', handleFilterChange);
+        
+        document.getElementById('direction-toggle-426').addEventListener('click', handleDirectionToggle);
+        document.getElementById('tabs-426').addEventListener('click', handleDayTypeChange);
+        document.getElementById('filter-buttons-426').addEventListener('click', handleFilterChange);
+        
+        // 💥 ОБРАБОТЧИКИ 118 💥
+        document.getElementById('direction-toggle-118').addEventListener('click', handleDirectionToggle);
+        document.getElementById('tabs-118').addEventListener('click', handleDayTypeChange);
+        document.getElementById('filter-buttons-118').addEventListener('click', handleFilterChange);
+        
+        switchTransport('116p');
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => {
+                    console.log('✅ Service Worker зарегистрирован');
+                    if (reg.waiting) {
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    }
+                })
+                .catch(err => console.log('❌ Ошибка регистрации SW:', err));
+        }
+
+        const isInstalled = window.matchMedia('(display-mode: standalone)').matches || ('standalone' in window.navigator && window.navigator.standalone);
+
+        if (!isInstalled) {
+            pwaContainer.style.display = 'block';
+            showPWAToast();
+        }
+
+    });
+</script>
+
+</body>
+</html>
